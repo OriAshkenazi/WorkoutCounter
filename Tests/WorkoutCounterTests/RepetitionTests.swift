@@ -15,6 +15,20 @@ private func joints(for metric: Double) -> [PoseObservation.JointName: PoseObser
     ]
 }
 
+private func generateVisionObservations(count: Int) -> [VNHumanBodyPoseObservation] {
+    var observations: [VNHumanBodyPoseObservation] = []
+    for i in 0..<count {
+        let angle = sin(Double(i) * 0.1)
+        let joints: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint] = [
+            .rightShoulder: .init(x: 1, y: 0, confidence: 1),
+            .rightElbow: .init(x: 0, y: 0, confidence: 1),
+            .rightWrist: .init(x: cos(angle), y: sin(angle), confidence: 1)
+        ]
+        observations.append(VNHumanBodyPoseObservation(points: joints))
+    }
+    return observations
+}
+
 @Test
 func repetitionDetection() async throws {
     let samples = generateMockPoseFrames(repetitions: 3)
@@ -303,5 +317,23 @@ func visionPoseConversion() async throws {
     #expect(pose.joints[.leftHip]?.x == 0.0)
     let sample = poseSample(from: pose, at: 0)
     #expect(abs(sample.metric - .pi/2) < 0.0001)
+}
+
+@Test
+func visionDataProcessingPerformance() async throws {
+    let observations = generateVisionObservations(count: 20)
+    let engine = StreamingWorkoutEngine(exercisePattern: nil)
+    var times: [TimeInterval] = []
+    var t: TimeInterval = 0
+    for obs in observations {
+        let pose = PoseObservation(visionObservation: obs)
+        let frame = PoseFrame(time: t, observation: pose)
+        let start = CFAbsoluteTimeGetCurrent()
+        _ = engine.processFrame(frame)
+        times.append(CFAbsoluteTimeGetCurrent() - start)
+        t += 0.033
+    }
+    let avg = times.reduce(0, +) / Double(times.count)
+    #expect(avg < 0.033)
 }
 

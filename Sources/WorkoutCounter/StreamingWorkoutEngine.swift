@@ -65,4 +65,14 @@ public final class StreamingWorkoutEngine {
             return true
         }
     }
+
+    /// Records Vision processing duration for performance metrics.
+    public func recordVisionProcessingTime(_ duration: TimeInterval) {
+        detector.recordVisionProcessingTime(duration)
+    }
+
+    /// Retrieves aggregated detector performance metrics.
+    func getDetectorMetrics() -> DetectorPerformanceMetrics {
+        return detector.getPerformanceMetrics()
+    }
 }
