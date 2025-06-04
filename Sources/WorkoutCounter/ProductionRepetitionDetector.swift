@@ -3,6 +3,16 @@ import CoreFoundation
 
 /// More robust streaming repetition detector with hysteresis and validation.
 final class ProductionRepetitionDetector {
+    private(set) var configuration = DetectorConfiguration(
+        bufferSize: 180,
+        smoothingWindow: 5,
+        smoothingFactor: 0.3,
+        hysteresisLow: 0.05,
+        hysteresisHigh: 0.1,
+        confidenceFrames: 3,
+        confidenceThreshold: 0.7
+    )
+
     private var featureExtractor = StreamingFeatureExtractor()
     private var state: DetectionState = .monitoring
     private var startTime: TimeInterval?
@@ -110,14 +120,51 @@ final class ProductionRepetitionDetector {
     func adaptToPerformanceLevel(_ level: PerformanceController.QualityLevel) {
         switch level {
         case .high:
-            break
+            configuration = DetectorConfiguration(
+                bufferSize: 180,
+                smoothingWindow: 5,
+                smoothingFactor: 0.3,
+                hysteresisLow: 0.05,
+                hysteresisHigh: 0.1,
+                confidenceFrames: 3,
+                confidenceThreshold: 0.7
+            )
         case .medium:
-            break
+            configuration = DetectorConfiguration(
+                bufferSize: 120,
+                smoothingWindow: 3,
+                smoothingFactor: 0.25,
+                hysteresisLow: 0.07,
+                hysteresisHigh: 0.12,
+                confidenceFrames: 3,
+                confidenceThreshold: 0.6
+            )
         case .low:
-            break
+            configuration = DetectorConfiguration(
+                bufferSize: 60,
+                smoothingWindow: 2,
+                smoothingFactor: 0.2,
+                hysteresisLow: 0.1,
+                hysteresisHigh: 0.15,
+                confidenceFrames: 2,
+                confidenceThreshold: 0.5
+            )
         case .minimal:
-            break
+            configuration = DetectorConfiguration(
+                bufferSize: 30,
+                smoothingWindow: 1,
+                smoothingFactor: 0.1,
+                hysteresisLow: 0.15,
+                hysteresisHigh: 0.2,
+                confidenceFrames: 1,
+                confidenceThreshold: 0.4
+            )
         }
+
+        featureExtractor = StreamingFeatureExtractor(bufferSize: configuration.bufferSize)
+        intensityFilter = TemporalSmoothingFilter(windowSize: configuration.smoothingWindow, smoothingFactor: configuration.smoothingFactor)
+        movementHysteresis = HysteresisFilter(low: configuration.hysteresisLow, high: configuration.hysteresisHigh)
+        confidence = ConfidenceAccumulator(requiredFrames: configuration.confidenceFrames, threshold: configuration.confidenceThreshold)
     }
 }
 
@@ -127,4 +174,15 @@ struct DetectorPerformanceMetrics {
     let memoryUsage: Int
     let confidenceAccuracy: Float
     let falsePositiveRate: Float
+}
+
+/// Captures the current tuning parameters of the detector.
+struct DetectorConfiguration: Equatable {
+    let bufferSize: Int
+    let smoothingWindow: Int
+    let smoothingFactor: Float
+    let hysteresisLow: Float
+    let hysteresisHigh: Float
+    let confidenceFrames: Int
+    let confidenceThreshold: Float
 }
