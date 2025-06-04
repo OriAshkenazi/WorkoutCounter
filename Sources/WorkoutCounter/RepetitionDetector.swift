@@ -1,12 +1,15 @@
 import Foundation
 
-public struct PoseSample {
+public struct PoseSample: Sendable {
     public let time: TimeInterval
     public let metric: Double
     public init(time: TimeInterval, metric: Double) {
         self.time = time
         self.metric = metric
     }
+
+    /// Convenience value representing an empty sample.
+    public static let zero = PoseSample(time: 0, metric: 0)
 }
 
 public final class RepetitionDetector {

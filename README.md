@@ -136,6 +136,12 @@ The package avoids dependencies on platform frameworks so it can compile on Linu
 
 The algorithms are lightweight and operate on small arrays of metrics, targeting realtime analysis (~33ms per frame) when connected to camera input. Accuracy depends on the quality of pose data and the learned patterns.
 
+## Streaming Support
+
+The streaming engine processes frames individually using circular buffers. It
+automatically scales analysis quality based on measured frame times and keeps a
+constant memory footprint, making it ready for live camera input.
+
 ## Contributing
 
 Please read [AGENTS.md](AGENTS.md) for coding style, testing requirements and project guidelines before opening a pull request.
