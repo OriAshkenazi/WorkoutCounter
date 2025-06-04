@@ -20,9 +20,9 @@ public final class RepetitionDetector {
         self.productionDetector = ProductionRepetitionDetector()
     }
 
-    /// Processes a pose sample and returns a completed repetition if available.
-    public func process(sample: PoseSample) -> RepetitionLog? {
-        let result = productionDetector.processFrame(sample)
+    /// Processes a pose frame and returns a completed repetition if available.
+    public func process(frame: PoseFrame) -> RepetitionLog? {
+        let result = productionDetector.processFrame(frame)
         if case .repetitionCompleted(let log) = result {
             return log
         }

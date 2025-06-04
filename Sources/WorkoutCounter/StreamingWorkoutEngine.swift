@@ -23,17 +23,17 @@ public final class StreamingWorkoutEngine {
 
   public enum FrameSkipReason { case performanceOptimization }
 
-    public func processFrame(_ sample: PoseSample) -> WorkoutUpdate {
+    public func processFrame(_ frame: PoseFrame) -> WorkoutUpdate {
         let start = CFAbsoluteTimeGetCurrent()
 
         let quality = performanceController.getOptimalQuality()
         detector.adaptToPerformanceLevel(quality)
 
-        guard shouldProcessFrame(sample, quality: quality) else {
+        guard shouldProcessFrame(frame, quality: quality) else {
             return .frameSkipped(reason: .performanceOptimization)
         }
 
-        let result = detector.processFrame(sample)
+        let result = detector.processFrame(frame)
         let elapsed = CFAbsoluteTimeGetCurrent() - start
         performanceController.recordFrameTime(elapsed)
 
@@ -57,7 +57,7 @@ public final class StreamingWorkoutEngine {
         }
     }
 
-    public func shouldProcessFrame(_ sample: PoseSample, quality: PerformanceController.QualityLevel) -> Bool {
+    public func shouldProcessFrame(_ sample: PoseFrame, quality: PerformanceController.QualityLevel) -> Bool {
         switch quality {
         case .low, .minimal:
             return false

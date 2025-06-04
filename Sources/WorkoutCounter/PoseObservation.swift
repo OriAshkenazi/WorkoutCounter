@@ -58,7 +58,7 @@ import Vision
 /// Platform-agnostic representation of a body pose.
 public struct PoseObservation {
     /// Supported joint identifiers matching Vision's joint names.
-    public enum JointName: String {
+    public enum JointName: String, Sendable {
         case root
         case neck
         case nose
@@ -81,7 +81,7 @@ public struct PoseObservation {
     }
 
     /// Location and confidence for a body joint.
-    public struct JointPoint {
+    public struct JointPoint: Sendable {
         public let x: Double
         public let y: Double
         public let confidence: Double

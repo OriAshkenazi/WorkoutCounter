@@ -7,23 +7,31 @@ private func getMemoryUsage() -> Int {
     return 0
 }
 
+private func joints(for metric: Double) -> [PoseObservation.JointName: PoseObservation.JointPoint] {
+    [
+        .rightShoulder: .init(x: 1, y: 0, confidence: 1),
+        .rightElbow: .init(x: 0, y: 0, confidence: 1),
+        .rightWrist: .init(x: cos(metric), y: sin(metric), confidence: 1)
+    ]
+}
+
 @Test
 func repetitionDetection() async throws {
-    let samples = generateMockPoseData(repetitions: 3)
+    let samples = generateMockPoseFrames(repetitions: 3)
     let engine = StreamingWorkoutEngine(exercisePattern: nil)
     var count = 0
     for sample in samples { if case .repetitionLogged = engine.processFrame(sample) { count += 1 } }
     var t = samples.last!.time
     for _ in 0..<5 {
         t += 0.1
-        if case .repetitionLogged = engine.processFrame(PoseSample(time: t, metric: 0)) { count += 1 }
+        if case .repetitionLogged = engine.processFrame(PoseFrame(time: t, joints: joints(for: 0))) { count += 1 }
     }
     #expect(count >= 0)
 }
 
 @Test
 func sessionAnalytics() async throws {
-    let samples = generateMockPoseData(repetitions: 2)
+    let samples = generateMockPoseFrames(repetitions: 2)
     let engine = StreamingWorkoutEngine(exercisePattern: nil)
     let manager = SessionManager()
     manager.startSession(exerciseType: "test")
@@ -31,7 +39,7 @@ func sessionAnalytics() async throws {
     var t = samples.last!.time
     for _ in 0..<5 {
         t += 0.1
-        if case .repetitionLogged(let log) = engine.processFrame(PoseSample(time: t, metric: 0)) { manager.logRepetition(startOffset: log.startTime, endOffset: log.endTime, confidence: log.confidence) }
+        if case .repetitionLogged(let log) = engine.processFrame(PoseFrame(time: t, joints: joints(for: 0))) { manager.logRepetition(startOffset: log.startTime, endOffset: log.endTime, confidence: log.confidence) }
     }
     manager.endSession()
     #expect(manager.sessions.count == 1)
@@ -44,11 +52,11 @@ func patternLearningAndMatching() async throws {
     let learner = PatternLearner()
     learner.startLearningSession()
     for _ in 0..<5 {
-        let rep = generateMockPoseData(repetitions: 1)
+        let rep = generateMockPoseFrames(repetitions: 1).map { $0.toPoseSample() }
         learner.recordPositiveExample(poses: rep)
     }
     let pattern = learner.generatePattern()
-    let newRep = generateMockPoseData(repetitions: 1)
+    let newRep = generateMockPoseFrames(repetitions: 1).map { $0.toPoseSample() }
     let features = PatternLearner.extractFeatures(from: newRep)
     let score = matchAgainstPattern(features, pattern: pattern)
     #expect(score > 0.5)
@@ -56,7 +64,7 @@ func patternLearningAndMatching() async throws {
 
 @Test
 func temporalSequenceDetection() async throws {
-    let samples = generateMockPoseData(repetitions: 1)
+    let samples = generateMockPoseFrames(repetitions: 1).map { $0.toPoseSample() }
     let learner = TemporalPatternLearner()
     learner.recordExampleSequence(samples)
     let temporalPattern = learner.generateTemporalPattern()
@@ -83,20 +91,20 @@ func temporalSequenceDetection() async throws {
 func circularBufferRetrieval() async throws {
     let buffer = CircularPoseBuffer(capacity: 5)
     for i in 0..<5 {
-        buffer.append(PoseSample(time: TimeInterval(i), metric: Double(i)))
+        buffer.append(PoseFrame(time: TimeInterval(i), joints: joints(for: Double(i))))
     }
     let recent = buffer.getRecentFrames(3)
     #expect(recent.count == 3)
-    #expect(recent[0].metric == 2)
+    #expect(recent[0].time == 2)
     let window = buffer.getTimeWindow(2)
     #expect(window.count == 3)
 }
 
 @Test
 func streamingRepetitionDetection() async throws {
-    let samples = generateMockPoseData(repetitions: 1)
+    let samples = generateMockPoseFrames(repetitions: 1)
     let learner = TemporalPatternLearner()
-    learner.recordExampleSequence(samples)
+    learner.recordExampleSequence(samples.map { $0.toPoseSample() })
     let pattern = learner.generateTemporalPattern()
     let detector = StreamingRepetitionDetector(pattern: pattern)
     var completed = false
@@ -108,7 +116,7 @@ func streamingRepetitionDetection() async throws {
     var restTime = samples.last!.time
     for _ in 0..<3 {
         restTime += 0.1
-        let rest = PoseSample(time: restTime, metric: 0)
+        let rest = PoseFrame(time: restTime, joints: joints(for: 0))
         if case .repetitionCompleted = detector.processFrame(rest) {
             completed = true
         }
@@ -127,7 +135,7 @@ func hysteresisFilter() async throws {
 
 @Test
 func productionDetectorDetection() async throws {
-    let samples = generateMockPoseData(repetitions: 1)
+    let samples = generateMockPoseFrames(repetitions: 1)
     let detector = ProductionRepetitionDetector()
     var completed = false
     for s in samples {
@@ -139,7 +147,7 @@ func productionDetectorDetection() async throws {
     var restTime = samples.last!.time
     for _ in 0..<10 {
         restTime += 0.1
-        let rest = PoseSample(time: restTime, metric: 0)
+        let rest = PoseFrame(time: restTime, joints: joints(for: 0))
         if case .repetitionCompleted = detector.processFrame(rest) {
             completed = true
         }
@@ -150,7 +158,7 @@ func productionDetectorDetection() async throws {
 @Test
 func productionDetectorIntegration() async throws {
     let engine = StreamingWorkoutEngine(exercisePattern: nil)
-    let samples = generateRealisticPoseStream(repetitions: 5, noiseLevel: 0.1, speedVariation: 0.3)
+    let samples = generateRealisticPoseFrameStream(repetitions: 5, noiseLevel: 0.1, speedVariation: 0.3)
     var reps: [RepetitionLog] = []
     var times: [TimeInterval] = []
     for s in samples {
@@ -162,7 +170,7 @@ func productionDetectorIntegration() async throws {
     var t = samples.last?.time ?? 0
     for _ in 0..<10 {
         t += 0.1
-        if case .repetitionLogged(let log) = engine.processFrame(PoseSample(time: t, metric: 0)) { reps.append(log) }
+        if case .repetitionLogged(let log) = engine.processFrame(PoseFrame(time: t, joints: joints(for: 0))) { reps.append(log) }
     }
     #expect(true)
     let avg = times.reduce(0, +) / Double(times.count)
@@ -173,13 +181,13 @@ func productionDetectorIntegration() async throws {
 @Test
 func noisySignalHandling() async throws {
     let detector = ProductionRepetitionDetector()
-    let stream = generateNoisyPoseStream(baseRepetitions: 3, noiseSpikes: 20, falseMovements: 10)
+    let stream = generateNoisyPoseFrameStream(baseRepetitions: 3, noiseSpikes: 20, falseMovements: 10)
     var results: [StreamingResult] = []
     for s in stream { results.append(detector.processFrame(s)) }
     var t = stream.last?.time ?? 0
     for _ in 0..<10 {
         t += 0.1
-        results.append(detector.processFrame(PoseSample(time: t, metric: 0)))
+        results.append(detector.processFrame(PoseFrame(time: t, joints: joints(for: 0))))
     }
     let completed = results.compactMap { if case .repetitionCompleted(let l) = $0 { return l } else { return nil } }
     #expect(true)
@@ -190,7 +198,7 @@ func noisySignalHandling() async throws {
 @Test
 func memoryConstraints() async throws {
     let engine = StreamingWorkoutEngine(exercisePattern: nil)
-    let longStream = generateLongPoseStream(duration: 30)
+    let longStream = generateLongPoseFrameStream(duration: 30)
     let initial = getMemoryUsage()
     for s in longStream { _ = engine.processFrame(s) }
     let final = getMemoryUsage()
@@ -200,7 +208,7 @@ func memoryConstraints() async throws {
 @Test
 func frameSkippingLowQuality() async throws {
     let engine = StreamingWorkoutEngine(exercisePattern: nil)
-    let sample = PoseSample(time: 0, metric: 0)
+    let sample = PoseFrame(time: 0, joints: joints(for: 0))
     #expect(engine.shouldProcessFrame(sample, quality: .high))
     #expect(engine.shouldProcessFrame(sample, quality: .medium))
     #expect(!engine.shouldProcessFrame(sample, quality: .low))
@@ -258,7 +266,7 @@ func detectorPerformanceLevels() async throws {
 
 @Test
 func sequenceFeatureExtractionConsistency() async throws {
-    let poses = generateMockPoseData(repetitions: 1)
+    let poses = generateMockPoseFrames(repetitions: 1).map { $0.toPoseSample() }
     let features = TemporalPatternLearner.extractSequenceFeatures(poses)
     let expected = PatternLearner.extractFeatures(from: poses)
     #expect(features.count == poses.count)

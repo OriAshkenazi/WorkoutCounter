@@ -35,9 +35,9 @@ final class ProductionRepetitionDetector {
         case cooldown(until: TimeInterval)
     }
 
-    func processFrame(_ sample: PoseSample) -> StreamingResult {
+    func processFrame(_ frame: PoseFrame) -> StreamingResult {
         let start = CFAbsoluteTimeGetCurrent()
-        let features = featureExtractor.processNewFrame(sample)
+        let features = featureExtractor.processNewFrame(frame)
         let smoothed = intensityFilter.process(features.movementIntensity)
         let moving = movementHysteresis.process(smoothed)
         let currentPhase = detectCurrentPhase(features)
@@ -50,7 +50,7 @@ final class ProductionRepetitionDetector {
         case .monitoring:
             if moving {
                 state = .potentialStart(frames: 1)
-                startTime = sample.time
+                startTime = frame.time
                 return .repetitionStarted(confidence: 0.1)
             }
             return .monitoring
@@ -69,7 +69,7 @@ final class ProductionRepetitionDetector {
 
         case .inProgress:
             if !moving && confidence.isConfirmed(currentPhase) {
-                state = .potentialEnd(endTime: sample.time)
+                state = .potentialEnd(endTime: frame.time)
             }
             return .repetitionInProgress(phase: currentPhase)
 
@@ -79,7 +79,7 @@ final class ProductionRepetitionDetector {
                 return .repetitionInProgress(phase: currentPhase)
             }
             let val = validator.validateRepetition(start: startTime ?? endTime, end: endTime)
-            state = .cooldown(until: sample.time + 0.5)
+            state = .cooldown(until: frame.time + 0.5)
             confidence.reset()
             switch val {
             case .valid:
@@ -89,7 +89,7 @@ final class ProductionRepetitionDetector {
             }
 
         case .cooldown(let until):
-            if sample.time >= until {
+            if frame.time >= until {
                 state = .monitoring
             }
             return .monitoring
