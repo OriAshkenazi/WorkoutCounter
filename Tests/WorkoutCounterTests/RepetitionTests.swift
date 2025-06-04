@@ -255,3 +255,15 @@ func detectorPerformanceLevels() async throws {
         confidenceThreshold: 0.4
     ))
 }
+
+@Test
+func sequenceFeatureExtractionConsistency() async throws {
+    let poses = generateMockPoseData(repetitions: 1)
+    let features = TemporalPatternLearner.extractSequenceFeatures(poses)
+    let expected = PatternLearner.extractFeatures(from: poses)
+    #expect(features.count == poses.count)
+    for f in features {
+        #expect(f.movementIntensity == expected.movementIntensity)
+        #expect(f.jointVelocities["metric"] == expected.jointVelocities["metric"])
+    }
+}
