@@ -9,6 +9,7 @@ final class VisionDemoController: NSObject, AVCaptureVideoDataOutputSampleBuffer
     private let session = AVCaptureSession()
     private let queue = DispatchQueue(label: "VisionDemo.queue")
     private let engine = StreamingWorkoutEngine()
+    private var extractor = StreamingFeatureExtractor()
 
     override init() {
         super.init()
@@ -29,25 +30,12 @@ final class VisionDemoController: NSObject, AVCaptureVideoDataOutputSampleBuffer
     func stop() { session.stopRunning() }
 
     private func processObservation(_ obs: VNHumanBodyPoseObservation, visionTime: TimeInterval) {
-        var joints: [PoseObservation.JointName: PoseObservation.JointPoint] = [:]
-        let mapping: [(PoseObservation.JointName, VNHumanBodyPoseObservation.JointName)] = [
-            (.leftShoulder, .leftShoulder),
-            (.rightShoulder, .rightShoulder),
-            (.leftWrist, .leftWrist),
-            (.rightWrist, .rightWrist)
-        ]
-        for (name, vnName) in mapping {
-            if let p = try? obs.recognizedPoint(vnName) {
-                joints[name] = PoseObservation.JointPoint(
-                    x: Double(p.location.x),
-                    y: Double(p.location.y),
-                    confidence: Double(p.confidence)
-                )
-            }
-        }
-        let frame = PoseFrame(time: CFAbsoluteTimeGetCurrent(), joints: joints)
+        let pose = PoseObservation(visionObservation: obs)
+        let frame = PoseFrame(time: CFAbsoluteTimeGetCurrent(), observation: pose)
         engine.recordVisionProcessingTime(visionTime)
+        let features = extractor.processNewFrame(frame)
         _ = engine.processFrame(frame)
+        print("intensity: \(features.movementIntensity) symmetry: \(features.symmetry)")
     }
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {

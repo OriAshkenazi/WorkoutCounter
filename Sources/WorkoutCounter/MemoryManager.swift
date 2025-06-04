@@ -1,11 +1,17 @@
 import Foundation
+#if os(Linux)
+@_silgen_name("malloc_trim")
+private func malloc_trim(_ pad: UInt) -> Int32
+#endif
 
 /// Simple memory watcher that triggers cleanup when usage grows.
 final class MemoryManager {
     private let maxBytes: Int = 50_000_000
 
     func optimizeMemoryUsage() {
-        // Placeholder for compression or cleanup actions.
+#if os(Linux)
+        malloc_trim(0)
+#endif
     }
 
     func estimateCurrentUsage() -> Int {
