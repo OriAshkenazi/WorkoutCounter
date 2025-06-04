@@ -1,6 +1,6 @@
 # WorkoutCounter
 
-WorkoutCounter is a Swift package for counting workout repetitions using pose metrics. It provides lightweight algorithms for detecting motion phases and learning exercise patterns. The code is completely platform agnostic so that it can be integrated on iOS or other Swift environments.
+WorkoutCounter is a Swift package for counting workout repetitions using pose metrics. It provides lightweight algorithms for detecting motion phases and learning exercise patterns. The core library remains platform agnostic so it can be integrated on iOS or other Swift environments.
 
 ## Project Overview
 
@@ -13,20 +13,25 @@ The library processes temporal pose data to detect when a full repetition has oc
 - **Dynamic Time Warping** based sequence matching
 - **Comprehensive tests** covering the major features
 - **Platform agnostic** core ready for future iOS integration
+- **Real-time streaming engine** with adaptive performance and memory management
+- **iOS sample library and Vision demo app** for camera-based testing
 
 ## Architecture Overview
 
 ```
-PoseFrame -> RepetitionDetector -> SessionManager
-              ^                    |
-              |                    v
- PatternLearner <-------- SequenceDetector
+PoseFrame -> StreamingWorkoutEngine -> SessionManager
+                 |       ^
+                 v       |
+  StreamingFeatureExtractor -> ProductionRepetitionDetector
+                 |       |
+   PerformanceController <- MemoryManager
 ```
 
 - `PoseFrame` represents a time‑stamped set of joint locations.
-- `RepetitionDetector` performs real time threshold detection.
-- `PatternLearner` generates an `ExercisePattern` from positive examples.
-- `SequenceDetector` validates full motion sequences using `ExerciseTemporalPattern`.
+- `StreamingWorkoutEngine` coordinates real time processing.
+- `ProductionRepetitionDetector` validates movement sequences.
+- `StreamingFeatureExtractor` converts pose data into movement features.
+- `PerformanceController` and `MemoryManager` tune quality and memory usage.
 - `SessionManager` collects repetitions and analytics data.
 
 ## Key Features
@@ -76,6 +81,21 @@ let score = matchAgainstPattern(features, pattern: pattern)
 print("match score", score)
 ```
 
+### Real-Time Streaming
+
+```swift
+import WorkoutCounter
+
+let engine = StreamingWorkoutEngine()
+let frames = generateMockPoseFrames(repetitions: 2)
+for frame in frames {
+    let update = engine.processFrame(frame)
+    if case .repetitionLogged(let log) = update {
+        print("rep from", log.startTime, "to", log.endTime)
+    }
+}
+```
+
 ### Temporal Sequence Detection
 
 ```swift
@@ -105,6 +125,11 @@ if case .completed(let confidence) = result {
 - `process(sample:)` → returns start and end times for a detected repetition.
 - Configurable thresholds through `lowThreshold` and `highThreshold`.
 
+### StreamingWorkoutEngine
+- `processFrame(_:)` → processes a `PoseFrame` and returns workout updates.
+- `shouldProcessFrame(_:, quality:)` → skips frames based on performance level.
+- `recordVisionProcessingTime(_:)` → logs Vision duration for metrics.
+
 ### PatternLearner
 - `startLearningSession()` – resets stored examples.
 - `recordPositiveExample(poses:)` / `recordNegativeExample(poses:)` – store sample sequences.
@@ -113,6 +138,14 @@ if case .completed(let confidence) = result {
 ### SequenceDetector
 - Processes `MovementFeatures` frames and determines when a full sequence has completed.
 - Uses an `ExerciseTemporalPattern` created by `TemporalPatternLearner` for timing validation.
+
+### ProductionRepetitionDetector
+- State machine built on `StreamingFeatureExtractor` that filters noise and validates timing.
+- Supports multiple performance levels for balancing accuracy and speed.
+
+### PerformanceController & MemoryManager
+- `PerformanceController` tracks frame rates and adjusts processing quality.
+- `MemoryManager` trims buffers to maintain a steady memory footprint.
 
 ### SessionManager & SessionAnalytics
 - Manages workout sessions and stores `RepetitionLog` values.
@@ -148,6 +181,19 @@ let features = movementFeatures(from: pose)
 #endif
 ```
 
+### iOS Samples
+
+Two sample targets demonstrate camera-based integration:
+
+- `WorkoutCounterCameraSample` exposes `CameraWorkoutController` for easy embedding in an app.
+- `VisionDemoApp` is a minimal executable that streams Vision poses into the engine.
+
+You can build the demo with:
+
+```bash
+swift build --product VisionDemoApp
+```
+
 ## Performance Characteristics
 
 The algorithms are lightweight and operate on small arrays of metrics, targeting realtime analysis (~33ms per frame) when connected to camera input. Accuracy depends on the quality of pose data and the learned patterns.
@@ -160,6 +206,8 @@ constant memory footprint, making it ready for live camera input.
 The production detector adds hysteresis-based movement detection, temporal
 smoothing and confidence accumulation to avoid false positives. Repetition
 timing is validated to ensure realistic motion before logging.
+`PerformanceController` monitors frame duration to adjust quality levels, while
+`MemoryManager` prunes old data to avoid leaks during long sessions.
 
 ## Contributing
 
