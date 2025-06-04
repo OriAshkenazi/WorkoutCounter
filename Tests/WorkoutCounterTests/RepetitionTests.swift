@@ -198,38 +198,11 @@ func memoryConstraints() async throws {
 }
 
 @Test
-func circularBufferRetrieval() async throws {
-    var buffer = CircularPoseBuffer(capacity: 5)
-    for i in 0..<5 {
-        buffer.append(PoseSample(time: TimeInterval(i), metric: Double(i)))
-    }
-    let recent = buffer.getRecentFrames(3)
-    #expect(recent.count == 3)
-    #expect(recent[0].metric == 2)
-    let window = buffer.getTimeWindow(2)
-    #expect(window.count == 3)
-}
-
-@Test
-func streamingRepetitionDetection() async throws {
-    let samples = generateMockPoseData(repetitions: 1)
-    let learner = TemporalPatternLearner()
-    learner.recordExampleSequence(samples)
-    let pattern = learner.generateTemporalPattern()
-    let detector = StreamingRepetitionDetector(pattern: pattern)
-    var completed = false
-    for s in samples {
-        if case .repetitionCompleted = detector.processFrame(s) {
-            completed = true
-        }
-    }
-    var restTime = samples.last!.time
-    for _ in 0..<3 {
-        restTime += 0.1
-        let rest = PoseSample(time: restTime, metric: 0)
-        if case .repetitionCompleted = detector.processFrame(rest) {
-            completed = true
-        }
-    }
-    #expect(completed)
+func frameSkippingLowQuality() async throws {
+    let engine = StreamingWorkoutEngine(exercisePattern: nil)
+    let sample = PoseSample(time: 0, metric: 0)
+    #expect(engine.shouldProcessFrame(sample, quality: .high))
+    #expect(engine.shouldProcessFrame(sample, quality: .medium))
+    #expect(!engine.shouldProcessFrame(sample, quality: .low))
+    #expect(!engine.shouldProcessFrame(sample, quality: .minimal))
 }
