@@ -13,7 +13,7 @@ public struct VNRecognizedPoint: Sendable {
 }
 
 public struct VNHumanBodyPoseObservation: Sendable {
-    public struct JointName: Hashable, Equatable, RawRepresentable, Sendable {
+    public struct JointName: Hashable, Equatable, RawRepresentable, CaseIterable, Sendable {
         public var rawValue: String
         public init(rawValue: String) { self.rawValue = rawValue }
 
@@ -36,6 +36,16 @@ public struct VNHumanBodyPoseObservation: Sendable {
         public static let rightKnee = Self(rawValue: "rightKnee")
         public static let leftAnkle = Self(rawValue: "leftAnkle")
         public static let rightAnkle = Self(rawValue: "rightAnkle")
+
+        public static var allCases: [Self] {
+            [
+                .root, .neck, .nose, .leftEye, .rightEye,
+                .leftEar, .rightEar, .leftShoulder, .rightShoulder,
+                .leftElbow, .rightElbow, .leftWrist, .rightWrist,
+                .leftHip, .rightHip, .leftKnee, .rightKnee,
+                .leftAnkle, .rightAnkle
+            ]
+        }
     }
 
     private var points: [JointName: VNRecognizedPoint]
@@ -58,7 +68,7 @@ import Vision
 /// Platform-agnostic representation of a body pose.
 public struct PoseObservation {
     /// Supported joint identifiers matching Vision's joint names.
-    public enum JointName: String, Sendable {
+    public enum JointName: String, CaseIterable, Sendable {
         case root
         case neck
         case nose
@@ -78,6 +88,16 @@ public struct PoseObservation {
         case rightKnee
         case leftAnkle
         case rightAnkle
+
+        public static var allCases: [Self] {
+            [
+                .root, .neck, .nose, .leftEye, .rightEye,
+                .leftEar, .rightEar, .leftShoulder, .rightShoulder,
+                .leftElbow, .rightElbow, .leftWrist, .rightWrist,
+                .leftHip, .rightHip, .leftKnee, .rightKnee,
+                .leftAnkle, .rightAnkle
+            ]
+        }
     }
 
     /// Location and confidence for a body joint.
@@ -109,28 +129,8 @@ public extension PoseObservation {
     /// Creates a ``PoseObservation`` from a ``VNHumanBodyPoseObservation``.
     init(visionObservation: VNHumanBodyPoseObservation) {
         var mapped: [JointName: JointPoint] = [:]
-        let mapping: [(JointName, VNHumanBodyPoseObservation.JointName)] = [
-            (.root, .root),
-            (.neck, .neck),
-            (.nose, .nose),
-            (.leftEye, .leftEye),
-            (.rightEye, .rightEye),
-            (.leftEar, .leftEar),
-            (.rightEar, .rightEar),
-            (.leftShoulder, .leftShoulder),
-            (.rightShoulder, .rightShoulder),
-            (.leftElbow, .leftElbow),
-            (.rightElbow, .rightElbow),
-            (.leftWrist, .leftWrist),
-            (.rightWrist, .rightWrist),
-            (.leftHip, .leftHip),
-            (.rightHip, .rightHip),
-            (.leftKnee, .leftKnee),
-            (.rightKnee, .rightKnee),
-            (.leftAnkle, .leftAnkle),
-            (.rightAnkle, .rightAnkle)
-        ]
-        for (name, vnName) in mapping {
+        for name in JointName.allCases {
+            let vnName = VNHumanBodyPoseObservation.JointName(rawValue: name.rawValue)
             if let p = try? visionObservation.recognizedPoint(vnName) {
                 mapped[name] = JointPoint(
                     x: Double(p.location.x),

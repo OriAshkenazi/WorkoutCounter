@@ -7,12 +7,14 @@ public final class StreamingWorkoutEngine {
     private let memoryManager: MemoryManager
     private let performanceController: PerformanceController
     private let sessionManager = SessionManager()
+    private var lastProcessedTime: TimeInterval = 0
 
     public init(exercisePattern: ExercisePattern? = nil) {
         self.detector = ProductionRepetitionDetector(pattern: exercisePattern)
         self.memoryManager = MemoryManager()
         self.performanceController = PerformanceController()
         detector.adaptToPerformanceLevel(.high)
+        performanceController.adaptToPerformanceLevel(.high)
     }
 
     public enum WorkoutUpdate {
@@ -28,6 +30,7 @@ public final class StreamingWorkoutEngine {
 
         let quality = performanceController.getOptimalQuality()
         detector.adaptToPerformanceLevel(quality)
+        performanceController.adaptToPerformanceLevel(quality)
 
         guard shouldProcessFrame(frame, quality: quality) else {
             return .frameSkipped(reason: .performanceOptimization)
@@ -58,12 +61,20 @@ public final class StreamingWorkoutEngine {
     }
 
     public func shouldProcessFrame(_ sample: PoseFrame, quality: PerformanceController.QualityLevel) -> Bool {
+        let interval: TimeInterval
         switch quality {
-        case .low, .minimal:
+        case .high:
+            interval = 0
+        case .medium:
+            interval = 0.033
+        case .low:
+            interval = 0.066
+        case .minimal:
             return false
-        default:
-            return true
         }
+        guard sample.time - lastProcessedTime >= interval else { return false }
+        lastProcessedTime = sample.time
+        return true
     }
 
     /// Records Vision processing duration for performance metrics.

@@ -222,11 +222,16 @@ func memoryConstraints() async throws {
 @Test
 func frameSkippingLowQuality() async throws {
     let engine = StreamingWorkoutEngine(exercisePattern: nil)
-    let sample = PoseFrame(time: 0, joints: joints(for: 0))
-    #expect(engine.shouldProcessFrame(sample, quality: .high))
-    #expect(engine.shouldProcessFrame(sample, quality: .medium))
-    #expect(!engine.shouldProcessFrame(sample, quality: .low))
-    #expect(!engine.shouldProcessFrame(sample, quality: .minimal))
+    let s1 = PoseFrame(time: 0, joints: joints(for: 0))
+    #expect(engine.shouldProcessFrame(s1, quality: .high))
+    let s2 = PoseFrame(time: 0.016, joints: joints(for: 0))
+    #expect(!engine.shouldProcessFrame(s2, quality: .medium))
+    let s3 = PoseFrame(time: 0.05, joints: joints(for: 0))
+    #expect(engine.shouldProcessFrame(s3, quality: .medium))
+    let s4 = PoseFrame(time: 0.06, joints: joints(for: 0))
+    #expect(!engine.shouldProcessFrame(s4, quality: .low))
+    let s5 = PoseFrame(time: 0.2, joints: joints(for: 0))
+    #expect(!engine.shouldProcessFrame(s5, quality: .minimal))
 }
 
 @Test
@@ -335,5 +340,50 @@ func visionDataProcessingPerformance() async throws {
     }
     let avg = times.reduce(0, +) / Double(times.count)
     #expect(avg < 0.033)
+}
+
+@Test
+func fullJointMapping() async throws {
+    var points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint] = [:]
+    for name in VNHumanBodyPoseObservation.JointName.allCases {
+        points[name] = .init(x: 0.1, y: 0.2, confidence: 0.9)
+    }
+    let vn = VNHumanBodyPoseObservation(points: points)
+    let pose = PoseObservation(visionObservation: vn)
+    #expect(pose.joints.count == PoseObservation.JointName.allCases.count)
+}
+
+@Test
+func visionIntegrationPerformance() async throws {
+    let observations = generateVisionObservations(count: 60)
+    let engine = StreamingWorkoutEngine(exercisePattern: nil)
+    var t: TimeInterval = 0
+    var total: TimeInterval = 0
+    for obs in observations {
+        let pose = PoseObservation(visionObservation: obs)
+        let frame = PoseFrame(time: t, observation: pose)
+        let start = CFAbsoluteTimeGetCurrent()
+        _ = engine.processFrame(frame)
+        total += CFAbsoluteTimeGetCurrent() - start
+        t += 0.033
+    }
+    let avg = total / Double(observations.count)
+    #expect(avg < 0.033)
+}
+
+@Test
+func realVisionDataFlow() async throws {
+    let observations = generateVisionObservations(count: 10)
+    var extractor = StreamingFeatureExtractor()
+    let detector = ProductionRepetitionDetector()
+    var t: TimeInterval = 0
+    for obs in observations {
+        let pose = PoseObservation(visionObservation: obs)
+        let frame = PoseFrame(time: t, observation: pose)
+        _ = extractor.processNewFrame(frame)
+        _ = detector.processFrame(frame)
+        t += 0.033
+    }
+    #expect(true)
 }
 
