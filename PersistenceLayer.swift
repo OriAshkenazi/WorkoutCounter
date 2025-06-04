@@ -133,6 +133,9 @@ class SessionManager {
     private let persistence: PersistenceController
     private var session: WorkoutSession?
     private var pauseStart: Date?
+    private var analytics = SessionAnalytics()
+
+    var sessionAnalytics: SessionAnalytics { analytics }
 
     init(persistence: PersistenceController = .shared) {
         self.persistence = persistence
@@ -146,6 +149,7 @@ class SessionManager {
         newSession.startTime = Date()
         newSession.exerciseType = exerciseType
         session = newSession
+        analytics = SessionAnalytics()
         persistence.save()
         state = .running
     }
@@ -160,6 +164,11 @@ class SessionManager {
         guard state == .paused else { return }
         pauseStart = nil
         state = .running
+    }
+
+    func updateIntensity(_ intensity: Double, at offset: TimeInterval) {
+        guard state == .running else { return }
+        analytics.updateMotionIntensity(intensity, at: offset)
     }
 
     func endSession() {
@@ -181,5 +190,6 @@ class SessionManager {
         log.session = session
         session.mutableSetValue(forKey: "repetitions").add(log)
         persistence.save()
+        analytics.registerRepetition(start: startOffset, end: endOffset)
     }
 }
