@@ -46,3 +46,28 @@ func patternLearningAndMatching() async throws {
     let score = matchAgainstPattern(features, pattern: pattern)
     #expect(score > 0.5)
 }
+
+@Test
+func temporalSequenceDetection() async throws {
+    let samples = generateMockPoseData(repetitions: 1)
+    let learner = TemporalPatternLearner()
+    learner.recordExampleSequence(samples)
+    let temporalPattern = learner.generateTemporalPattern()
+    let detector = SequenceDetector(pattern: temporalPattern)
+    var result: SequenceDetector.SequenceDetectionResult = .inProgress(phase: .rest)
+    let features = samples.map {
+        MovementFeatures(jointVelocities: ["metric": Float($0.metric)], jointAngles: [:], movementIntensity: Float($0.metric), symmetry: 1)
+    }
+    for f in features {
+        result = detector.processFrame(f)
+    }
+    // final rest frame to complete sequence
+    let restFeature = MovementFeatures(jointVelocities: ["metric": 0], jointAngles: [:], movementIntensity: 0, symmetry: 1)
+    result = detector.processFrame(restFeature)
+    switch result {
+    case .completed(let conf):
+        #expect(conf >= 0)
+    default:
+        #expect(false, "sequence not detected")
+    }
+}
