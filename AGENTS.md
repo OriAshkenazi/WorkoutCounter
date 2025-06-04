@@ -10,23 +10,37 @@ This is a Swift package for workout repetition detection using computer vision a
 ├── AGENTS.md                              # This file
 ├── Sources/WorkoutCounter/                # Main library code
 │   ├── Models.swift                       # Data structures and types
-│   ├── RepetitionDetector.swift          # Core detection algorithms
-│   ├── PatternLearner.swift              # Machine learning components
-│   ├── SequenceMatching.swift            # Temporal analysis algorithms
-│   ├── SessionAnalytics.swift            # Performance metrics
-│   └── MockPoseData.swift                # Test data generators
+│   ├── PoseFrame.swift                    # Time stamped pose samples
+│   ├── PoseObservation.swift              # Vision/pose utilities
+│   ├── RepetitionDetector.swift           # Baseline detector algorithms
+│   ├── ProductionRepetitionDetector.swift # Streaming detection with validation
+│   ├── StreamingWorkoutEngine.swift       # High level engine for real time use
+│   ├── StreamingFeatureExtractor.swift    # Sliding window feature extraction
+│   ├── PerformanceController.swift        # Adaptive quality logic
+│   ├── MemoryManager.swift                # Memory usage monitoring
+│   ├── PatternLearner.swift               # Machine learning components
+│   ├── SequenceMatching.swift             # Temporal analysis algorithms
+│   ├── SessionAnalytics.swift             # Performance metrics
+│   ├── SignalProcessing.swift             # Utility filters
+│   └── MockPoseData.swift                 # Test data generators
+├── Sources/WorkoutCounterCameraSample/    # iOS sample library
+│   └── CameraWorkoutController.swift      # Camera/Vision integration example
+├── Sources/VisionDemoApp/                 # Demo executable for iOS
+│   └── DemoApp.swift                      # Simple Vision processing app
 └── Tests/WorkoutCounterTests/             # Test suite
-    └── RepetitionTests.swift              # All test cases
+    ├── RepetitionTests.swift              # Functional tests
+    └── PerformanceBenchmarks.swift        # Performance benchmarks
 ```
 
 ## Development Guidelines
 
 ### Where to Work
-- **Core algorithms**: Add new detection logic to `Sources/WorkoutCounter/RepetitionDetector.swift`
-- **Data models**: Extend types in `Sources/WorkoutCounter/Models.swift`
-- **ML components**: Enhance pattern learning in `Sources/WorkoutCounter/PatternLearner.swift`
-- **Analytics**: Add metrics to `Sources/WorkoutCounter/SessionAnalytics.swift`
-- **Testing**: All tests go in `Tests/WorkoutCounterTests/RepetitionTests.swift`
+- **Core algorithms**: Extend detection logic in `RepetitionDetector.swift` and `ProductionRepetitionDetector.swift`
+- **Data models**: Update types in `Models.swift`, `PoseFrame.swift` and `PoseObservation.swift`
+- **Streaming pipeline**: Modify real time processing in `StreamingWorkoutEngine.swift` and `StreamingFeatureExtractor.swift`
+- **Performance utilities**: Tune `PerformanceController.swift` and `MemoryManager.swift` for profiling
+- **Analytics**: Extend workout metrics in `SessionAnalytics.swift`
+- **Testing**: Add unit tests in `RepetitionTests.swift` and performance cases in `PerformanceBenchmarks.swift`
 
 ### Code Style
 - Use Swift naming conventions (camelCase for functions/variables, PascalCase for types)
@@ -40,7 +54,7 @@ This is a Swift package for workout repetition detection using computer vision a
 - **Add tests**: Every new feature must include corresponding test cases
 - **Test naming**: Use descriptive test function names like `testTemporalSequenceDetection`
 - **Mock data**: Use `MockPoseData` generators for realistic test scenarios
-- **Coverage**: Test both happy path and edge cases
+- **Coverage**: Test both happy path and edge cases, including performance benchmarks
 
 ### Platform Considerations
 - **Keep iOS-agnostic**: Core algorithms should work without UIKit/Vision/CoreData
@@ -64,7 +78,8 @@ This is a Swift package for workout repetition detection using computer vision a
 ### Common Tasks
 - **Adding new exercise support**: Extend `ExercisePattern` and update learning algorithms
 - **Improving detection accuracy**: Enhance feature extraction in `MovementFeatures`
-- **Performance optimization**: Profile timing-critical sections with instruments
+- **Streaming improvements**: Tune buffer sizes and validation logic in the streaming detectors
+- **Performance optimization**: Profile and adapt quality levels with `PerformanceController`
 - **Analytics enhancement**: Add new metrics to `SessionAnalytics`
 
 ### Validation Checklist
