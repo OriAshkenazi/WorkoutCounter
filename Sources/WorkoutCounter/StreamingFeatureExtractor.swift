@@ -9,12 +9,12 @@ struct StreamingFeatureExtractor {
         buffer = CircularPoseBuffer(capacity: bufferSize)
     }
 
-    mutating func processNewFrame(_ sample: PoseSample) -> MovementFeatures {
-        buffer.append(sample)
+    mutating func processNewFrame(_ frame: PoseFrame) -> MovementFeatures {
+        buffer.append(frame)
         let recent = buffer.getRecentFrames(3)
         let features = Self.extractMovementFeatures(recent)
-        cached[sample.time] = features
-        cleanupOldFeatures(olderThan: sample.time - 10.0)
+        cached[frame.time] = features
+        cleanupOldFeatures(olderThan: frame.time - 10.0)
         return features
     }
 
@@ -37,5 +37,10 @@ struct StreamingFeatureExtractor {
         let avgVel = velocities.reduce(0, +) / Float(max(velocities.count,1))
         let rms = sqrt(velocities.map { $0 * $0 }.reduce(0, +) / Float(max(velocities.count,1)))
         return MovementFeatures(jointVelocities: ["metric": avgVel], jointAngles: [:], movementIntensity: rms, symmetry: 1)
+    }
+
+    private static func extractMovementFeatures(_ frames: [PoseFrame]) -> MovementFeatures {
+        let samples = frames.map { $0.toPoseSample() }
+        return extractMovementFeatures(samples)
     }
 }

@@ -39,25 +39,26 @@ struct CircularBuffer<Element> {
 /// Fixed-size buffer for pose samples supporting time based queries.
 final class CircularPoseBuffer {
     private let capacity: Int
-    private var buffer: [PoseSample]
+    private var buffer: [PoseFrame]
     private var writeIndex: Int = 0
     private(set) var count: Int = 0
 
     init(capacity: Int = 180) {
         self.capacity = capacity
-        self.buffer = Array(repeating: .zero, count: capacity)
+        let empty = PoseFrame(time: 0, joints: [:])
+        self.buffer = Array(repeating: empty, count: capacity)
     }
 
-    func append(_ sample: PoseSample) {
+    func append(_ sample: PoseFrame) {
         buffer[writeIndex] = sample
         writeIndex = (writeIndex + 1) % capacity
         count = min(count + 1, capacity)
     }
 
     /// Returns the last `frameCount` samples in chronological order.
-    func getRecentFrames(_ frameCount: Int) -> [PoseSample] {
+    func getRecentFrames(_ frameCount: Int) -> [PoseFrame] {
         let actual = min(frameCount, count)
-        var result: [PoseSample] = []
+        var result: [PoseFrame] = []
         result.reserveCapacity(actual)
         for i in 0..<actual {
             let idx = (writeIndex - actual + i + capacity) % capacity
@@ -67,10 +68,10 @@ final class CircularPoseBuffer {
     }
 
     /// Returns all frames within the last `duration` seconds.
-    func getTimeWindow(_ duration: TimeInterval) -> [PoseSample] {
+    func getTimeWindow(_ duration: TimeInterval) -> [PoseFrame] {
         guard count > 0 else { return [] }
         let latestTime = buffer[(writeIndex - 1 + capacity) % capacity].time
-        var frames: [PoseSample] = []
+        var frames: [PoseFrame] = []
         for i in 0..<count {
             let idx = (writeIndex - 1 - i + capacity) % capacity
             let sample = buffer[idx]

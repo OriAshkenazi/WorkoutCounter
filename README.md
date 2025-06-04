@@ -17,13 +17,13 @@ The library processes temporal pose data to detect when a full repetition has oc
 ## Architecture Overview
 
 ```
-PoseSample -> RepetitionDetector -> SessionManager
+PoseFrame -> RepetitionDetector -> SessionManager
               ^                    |
               |                    v
  PatternLearner <-------- SequenceDetector
 ```
 
-- `PoseSample` represents a single time‑stamped pose metric.
+- `PoseFrame` represents a time‑stamped set of joint locations.
 - `RepetitionDetector` performs real time threshold detection.
 - `PatternLearner` generates an `ExercisePattern` from positive examples.
 - `SequenceDetector` validates full motion sequences using `ExerciseTemporalPattern`.
@@ -43,10 +43,10 @@ PoseSample -> RepetitionDetector -> SessionManager
 import WorkoutCounter
 
 // Detect repetitions from mock pose data
-let samples = generateMockPoseData(repetitions: 3)
+let samples = generateMockPoseFrames(repetitions: 3)
 let detector = RepetitionDetector()
-for sample in samples {
-    if let rep = detector.process(sample: sample) {
+for frame in samples {
+    if let rep = detector.process(frame: frame) {
         print("rep from", rep.start, "to", rep.end)
     }
 }
@@ -54,11 +54,11 @@ for sample in samples {
 // Learn a simple pattern
 let learner = PatternLearner()
 learner.startLearningSession()
-learner.recordPositiveExample(poses: samples)
+learner.recordPositiveExample(poses: samples.map { $0.toPoseSample() })
 let pattern = learner.generatePattern()
 
 // Score a new repetition using the learned pattern
-let testRep = generateMockPoseData(repetitions: 1)
+let testRep = generateMockPoseFrames(repetitions: 1).map { $0.toPoseSample() }
 var velocities: [Float] = []
 for i in 1..<testRep.count {
     let dt = testRep[i].time - testRep[i - 1].time
@@ -80,13 +80,13 @@ print("match score", score)
 
 ```swift
 let temporalLearner = TemporalPatternLearner()
-temporalLearner.recordExampleSequence(samples)
+temporalLearner.recordExampleSequence(samples.map { $0.toPoseSample() })
 let template = temporalLearner.generateTemporalPattern()
 
 let sequenceDetector = SequenceDetector(pattern: template)
 var result: SequenceDetector.SequenceDetectionResult = .inProgress(phase: .rest)
 let featureFrames = samples.map {
-    MovementFeatures(jointVelocities: ["metric": Float($0.metric)], jointAngles: [:], movementIntensity: Float($0.metric), symmetry: 1)
+    MovementFeatures(jointVelocities: ["metric": Float($0.toPoseSample().metric)], jointAngles: [:], movementIntensity: Float($0.toPoseSample().metric), symmetry: 1)
 }
 for f in featureFrames {
     result = sequenceDetector.processFrame(f)

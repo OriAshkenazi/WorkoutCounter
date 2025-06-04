@@ -1,92 +1,119 @@
 import Foundation
 
+private func joints(for angle: Double) -> [PoseObservation.JointName: PoseObservation.JointPoint] {
+    let shoulder = PoseObservation.JointPoint(x: 1, y: 0, confidence: 1)
+    let elbow = PoseObservation.JointPoint(x: 0, y: 0, confidence: 1)
+    let wrist = PoseObservation.JointPoint(x: cos(angle), y: sin(angle), confidence: 1)
+    return [
+        .rightShoulder: shoulder,
+        .rightElbow: elbow,
+        .rightWrist: wrist
+    ]
+}
+
 /// Generates a simple sequence of pose samples representing up and down motion.
 /// - Parameters:
 ///   - repetitions: Number of repetitions in the sequence.
 ///   - step: Time difference between samples.
 /// - Returns: Array of `PoseSample` values.
-public func generateMockPoseData(repetitions: Int, step: TimeInterval = 0.1) -> [PoseSample] {
-    var samples: [PoseSample] = []
+public func generateMockPoseFrames(repetitions: Int, step: TimeInterval = 0.1) -> [PoseFrame] {
+    var frames: [PoseFrame] = []
     var time: TimeInterval = 0
     for _ in 0..<repetitions {
-        samples.append(PoseSample(time: time, metric: 1.0))
+        frames.append(PoseFrame(time: time, joints: joints(for: 1.0)))
         time += step
-        samples.append(PoseSample(time: time, metric: 0.0))
+        frames.append(PoseFrame(time: time, joints: joints(for: 0.0)))
         time += step
-        samples.append(PoseSample(time: time, metric: 1.0))
+        frames.append(PoseFrame(time: time, joints: joints(for: 1.0)))
         time += step
         // rest period
-        samples.append(PoseSample(time: time, metric: 0.0))
+        frames.append(PoseFrame(time: time, joints: joints(for: 0.0)))
         time += step
     }
-    return samples
+    return frames
+}
+
+public func generateMockPoseData(repetitions: Int, step: TimeInterval = 0.1) -> [PoseSample] {
+    return generateMockPoseFrames(repetitions: repetitions, step: step).map { $0.toPoseSample() }
 }
 
 /// Generates a stream with noise and varying speed for integration tests.
-public func generateRealisticPoseStream(repetitions: Int, noiseLevel: Double, speedVariation: Double) -> [PoseSample] {
-    var samples: [PoseSample] = []
+public func generateRealisticPoseFrameStream(repetitions: Int, noiseLevel: Double, speedVariation: Double) -> [PoseFrame] {
+    var frames: [PoseFrame] = []
     var time: TimeInterval = 0
     for _ in 0..<repetitions {
         let varStep = 0.1 * (1 + Double.random(in: -speedVariation...speedVariation))
-        samples.append(PoseSample(time: time, metric: 1.0 + Double.random(in: -noiseLevel...noiseLevel)))
+        frames.append(PoseFrame(time: time, joints: joints(for: 1.0 + Double.random(in: -noiseLevel...noiseLevel))))
         time += varStep
-        samples.append(PoseSample(time: time, metric: Double.random(in: -noiseLevel...noiseLevel)))
+        frames.append(PoseFrame(time: time, joints: joints(for: Double.random(in: -noiseLevel...noiseLevel))))
         time += varStep
-        samples.append(PoseSample(time: time, metric: 1.0 + Double.random(in: -noiseLevel...noiseLevel)))
+        frames.append(PoseFrame(time: time, joints: joints(for: 1.0 + Double.random(in: -noiseLevel...noiseLevel))))
         time += varStep
     }
-    return samples
+    return frames
 }
 
 /// Generates a noisy stream with false movements for robustness tests.
-public func generateNoisyPoseStream(baseRepetitions: Int, noiseSpikes: Int, falseMovements: Int) -> [PoseSample] {
-    var stream = generateRealisticPoseStream(repetitions: baseRepetitions, noiseLevel: 0.05, speedVariation: 0)
+public func generateNoisyPoseFrameStream(baseRepetitions: Int, noiseSpikes: Int, falseMovements: Int) -> [PoseFrame] {
+    var stream = generateRealisticPoseFrameStream(repetitions: baseRepetitions, noiseLevel: 0.05, speedVariation: 0)
     var time = stream.last?.time ?? 0
     for _ in 0..<noiseSpikes {
         time += 0.05
-        stream.append(PoseSample(time: time, metric: Double.random(in: -1...1)))
+        stream.append(PoseFrame(time: time, joints: joints(for: Double.random(in: -1...1))))
     }
     for _ in 0..<falseMovements {
         time += 0.1
-        stream.append(PoseSample(time: time, metric: 0.5))
+        stream.append(PoseFrame(time: time, joints: joints(for: 0.5)))
     }
     return stream
 }
 
 /// Generates a long neutral pose stream for memory tests.
-public func generateLongPoseStream(duration: TimeInterval) -> [PoseSample] {
-    var samples: [PoseSample] = []
+public func generateLongPoseFrameStream(duration: TimeInterval) -> [PoseFrame] {
+    var samples: [PoseFrame] = []
     var time: TimeInterval = 0
     while time < duration {
-        samples.append(PoseSample(time: time, metric: sin(time)))
+        samples.append(PoseFrame(time: time, joints: joints(for: sin(time))))
         time += 0.1
     }
     return samples
 }
 
-public func generateHighFrequencyStream(sampleCount: Int) -> [PoseSample] {
-    var samples: [PoseSample] = []
+public func generateHighFrequencyFrameStream(sampleCount: Int) -> [PoseFrame] {
+    var samples: [PoseFrame] = []
     for i in 0..<sampleCount {
         let t = Double(i) * 0.033
-        samples.append(PoseSample(time: t, metric: sin(t)))
+        samples.append(PoseFrame(time: t, joints: joints(for: sin(t))))
+    }
+    return samples
+}
+
+public func generateHighFrequencyStream(sampleCount: Int) -> [PoseSample] {
+    return generateHighFrequencyFrameStream(sampleCount: sampleCount).map { $0.toPoseSample() }
+}
+
+public func generateLongFrameStream(sampleCount: Int) -> [PoseFrame] {
+    var samples: [PoseFrame] = []
+    for i in 0..<sampleCount {
+        samples.append(PoseFrame(time: Double(i) * 0.033, joints: joints(for: Double.random(in: -1...1))))
     }
     return samples
 }
 
 public func generateLongStream(sampleCount: Int) -> [PoseSample] {
-    var samples: [PoseSample] = []
-    for i in 0..<sampleCount {
-        samples.append(PoseSample(time: Double(i) * 0.033, metric: Double.random(in: -1...1)))
+    return generateLongFrameStream(sampleCount: sampleCount).map { $0.toPoseSample() }
+}
+
+public func generateHighComplexityFrameStream() -> [PoseFrame] {
+    var samples: [PoseFrame] = []
+    var time: TimeInterval = 0
+    for _ in 0..<1000 {
+        samples.append(PoseFrame(time: time, joints: joints(for: Double.random(in: -1...1))))
+        time += 0.016
     }
     return samples
 }
 
 public func generateHighComplexityStream() -> [PoseSample] {
-    var samples: [PoseSample] = []
-    var time: TimeInterval = 0
-    for _ in 0..<1000 {
-        samples.append(PoseSample(time: time, metric: Double.random(in: -1...1)))
-        time += 0.016
-    }
-    return samples
+    return generateHighComplexityFrameStream().map { $0.toPoseSample() }
 }

@@ -17,13 +17,13 @@ final class StreamingRepetitionDetector {
         self.sequenceDetector = SequenceDetector(pattern: pattern)
     }
 
-    func processFrame(_ sample: PoseSample) -> StreamingResult {
-        let features = featureExtractor.processNewFrame(sample)
+    func processFrame(_ frame: PoseFrame) -> StreamingResult {
+        let features = featureExtractor.processNewFrame(frame)
         switch state {
         case .monitoring:
             if features.movementIntensity > 0.1 {
-                state = .inProgress(startTime: sample.time)
-                activeStart = sample.time
+                state = .inProgress(startTime: frame.time)
+                activeStart = frame.time
                 return .repetitionStarted(confidence: 1)
             }
             return .monitoring
@@ -32,20 +32,20 @@ final class StreamingRepetitionDetector {
             let result = sequenceDetector.processFrame(features)
             switch result {
             case .completed(let conf):
-                state = .cooldown(until: sample.time + 0.5)
-                let log = RepetitionLog(startTime: startTime, endTime: sample.time, confidence: conf)
+                state = .cooldown(until: frame.time + 0.5)
+                let log = RepetitionLog(startTime: startTime, endTime: frame.time, confidence: conf)
                 return .repetitionCompleted(log)
             case .inProgress(let phase):
                 if features.movementIntensity < 0.05 {
-                    state = .cooldown(until: sample.time + 0.5)
-                    let log = RepetitionLog(startTime: startTime, endTime: sample.time, confidence: 1)
+                    state = .cooldown(until: frame.time + 0.5)
+                    let log = RepetitionLog(startTime: startTime, endTime: frame.time, confidence: 1)
                     return .repetitionCompleted(log)
                 }
                 return .repetitionInProgress(phase: phase)
             }
 
         case .cooldown(let until):
-            if sample.time >= until {
+            if frame.time >= until {
                 state = .monitoring
             }
             return .monitoring
