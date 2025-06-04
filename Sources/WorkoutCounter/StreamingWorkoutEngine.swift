@@ -2,28 +2,28 @@ import Foundation
 import CoreFoundation
 
 /// High level engine that coordinates streaming processing.
-final class StreamingWorkoutEngine {
+public final class StreamingWorkoutEngine {
     private let detector: ProductionRepetitionDetector
     private let memoryManager: MemoryManager
     private let performanceController: PerformanceController
     private let sessionManager = SessionManager()
 
-    init(exercisePattern: ExercisePattern? = nil) {
+    public init(exercisePattern: ExercisePattern? = nil) {
         self.detector = ProductionRepetitionDetector(pattern: exercisePattern)
         self.memoryManager = MemoryManager()
         self.performanceController = PerformanceController()
         detector.adaptToPerformanceLevel(.high)
     }
 
-    enum WorkoutUpdate {
+    public enum WorkoutUpdate {
         case frameSkipped(reason: FrameSkipReason)
         case noEvent
         case repetitionLogged(RepetitionLog)
     }
 
-  enum FrameSkipReason { case performanceOptimization }
+  public enum FrameSkipReason { case performanceOptimization }
 
-    func processFrame(_ sample: PoseSample) -> WorkoutUpdate {
+    public func processFrame(_ sample: PoseSample) -> WorkoutUpdate {
         let start = CFAbsoluteTimeGetCurrent()
 
         let quality = performanceController.getOptimalQuality()
@@ -57,7 +57,7 @@ final class StreamingWorkoutEngine {
         }
     }
 
-    func shouldProcessFrame(_ sample: PoseSample, quality: PerformanceController.QualityLevel) -> Bool {
+    public func shouldProcessFrame(_ sample: PoseSample, quality: PerformanceController.QualityLevel) -> Bool {
         switch quality {
         case .low, .minimal:
             return false
