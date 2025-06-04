@@ -267,3 +267,16 @@ func sequenceFeatureExtractionConsistency() async throws {
         #expect(f.jointVelocities["metric"] == expected.jointVelocities["metric"])
     }
 }
+
+@Test
+func poseObservationConversion() async throws {
+    let observation = PoseObservation(joints: [
+        .rightWrist: .init(x: 0.0, y: 0.9, confidence: 1.0),
+        .rightShoulder: .init(x: 0.0, y: 0.5, confidence: 1.0)
+    ])
+    let sample = poseSample(from: observation, at: 0)
+    #expect(sample.metric == 0.4)
+    let features = movementFeatures(from: observation)
+    #expect(features.movementIntensity == 1)
+}
+
