@@ -1,13 +1,13 @@
 import Foundation
 
-class SessionAnalytics {
-    private(set) var restDurations: [TimeInterval] = []
+public final class SessionAnalytics {
+    public private(set) var restDurations: [TimeInterval] = []
     private var lastRepEnd: TimeInterval?
     private var restStart: TimeInterval?
     private var isResting = false
-    var intensityThreshold: Double = 0.1
+    public var intensityThreshold: Double = 0.1
 
-    func updateMotionIntensity(_ intensity: Double, at offset: TimeInterval) {
+    public func updateMotionIntensity(_ intensity: Double, at offset: TimeInterval) {
         if intensity < intensityThreshold {
             if !isResting {
                 restStart = offset
@@ -25,7 +25,7 @@ class SessionAnalytics {
         }
     }
 
-    func registerRepetition(start: TimeInterval, end: TimeInterval) {
+    public func registerRepetition(start: TimeInterval, end: TimeInterval) {
         if let lastEnd = lastRepEnd {
             let duration = start - lastEnd
             if duration > 0 { restDurations.append(duration) }
