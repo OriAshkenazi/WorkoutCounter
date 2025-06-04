@@ -22,6 +22,7 @@ final class ProductionRepetitionDetector {
     private var confidence = ConfidenceAccumulator()
     private let validator = TemporalValidator()
     private var processingTimes = CircularBuffer<TimeInterval>(capacity: 60)
+    private var visionTimes = CircularBuffer<TimeInterval>(capacity: 60)
 
     init(pattern: ExercisePattern? = nil) {
         self.exercisePattern = pattern
@@ -114,12 +115,20 @@ final class ProductionRepetitionDetector {
     func getPerformanceMetrics() -> DetectorPerformanceMetrics {
         let times = processingTimes.toArray()
         let avg = times.isEmpty ? 0 : times.reduce(0, +) / Double(times.count)
+        let vision = visionTimes.toArray()
+        let visionAvg = vision.isEmpty ? 0 : vision.reduce(0, +) / Double(vision.count)
         return DetectorPerformanceMetrics(
             averageProcessingTime: avg,
+            averageVisionProcessingTime: visionAvg,
             memoryUsage: 0,
             confidenceAccuracy: 1,
             falsePositiveRate: 0
         )
+    }
+
+    /// Records the time taken by Vision processing for a frame.
+    func recordVisionProcessingTime(_ duration: TimeInterval) {
+        visionTimes.append(duration)
     }
 
     /// Adjusts detection complexity according to a quality level.
@@ -177,6 +186,7 @@ final class ProductionRepetitionDetector {
 /// Basic metrics describing detector performance.
 struct DetectorPerformanceMetrics {
     let averageProcessingTime: TimeInterval
+    let averageVisionProcessingTime: TimeInterval
     let memoryUsage: Int
     let confidenceAccuracy: Float
     let falsePositiveRate: Float

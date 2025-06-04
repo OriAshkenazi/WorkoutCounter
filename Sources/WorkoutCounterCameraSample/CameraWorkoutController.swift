@@ -29,9 +29,14 @@ public final class CameraWorkoutController: NSObject {
     public func start() { session.startRunning() }
     public func stop() { session.stopRunning() }
 
-    private func handleObservation(_ obs: VNHumanBodyPoseObservation) {
+    private func handleObservation(_ obs: VNHumanBodyPoseObservation, visionTime: TimeInterval) {
         let pose = PoseObservation(visionObservation: obs)
         let sample = poseSample(from: pose, at: CFAbsoluteTimeGetCurrent())
+        engine.recordVisionProcessingTime(visionTime)
+        let quality = performance.getOptimalQuality()
+        guard engine.shouldProcessFrame(sample, quality: quality) else {
+            return
+        }
         _ = engine.processFrame(sample)
     }
 }
@@ -46,15 +51,17 @@ extension CameraWorkoutController: AVCaptureVideoDataOutputSampleBufferDelegate 
             defer {
                 let elapsed = CFAbsoluteTimeGetCurrent() - start
                 self.performance.recordFrameTime(elapsed)
-                print("Frame time: \(elapsed)")
+                print("Total frame duration: \(elapsed)")
             }
             guard let buffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
             let request = VNDetectHumanBodyPoseRequest()
             let handler = VNImageRequestHandler(cvPixelBuffer: buffer, options: [:])
             do {
+                let visionStart = CFAbsoluteTimeGetCurrent()
                 try handler.perform([request])
+                let visionElapsed = CFAbsoluteTimeGetCurrent() - visionStart
                 if let result = request.results?.first as? VNHumanBodyPoseObservation {
-                    self.handleObservation(result)
+                    self.handleObservation(result, visionTime: visionElapsed)
                 }
             } catch {
                 print("Vision error: \(error)")
