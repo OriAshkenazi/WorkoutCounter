@@ -141,7 +141,6 @@ The algorithms are lightweight and operate on small arrays of metrics, targeting
 The streaming engine processes frames individually using circular buffers. It
 automatically scales analysis quality based on measured frame times and keeps a
 constant memory footprint, making it ready for live camera input.
-
 The production detector adds hysteresis-based movement detection, temporal
 smoothing and confidence accumulation to avoid false positives. Repetition
 timing is validated to ensure realistic motion before logging.

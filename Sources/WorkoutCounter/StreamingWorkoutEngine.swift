@@ -21,7 +21,7 @@ final class StreamingWorkoutEngine {
         case repetitionLogged(RepetitionLog)
     }
 
-    enum FrameSkipReason { case performanceOptimization }
+  enum FrameSkipReason { case performanceOptimization }
 
     func processFrame(_ sample: PoseSample) -> WorkoutUpdate {
         let start = CFAbsoluteTimeGetCurrent()
