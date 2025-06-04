@@ -25,3 +25,21 @@ manager.endSession()
 ```
 
 These models demonstrate a simple approach to persisting workout history on device.
+
+## Session Analytics
+
+`SessionManager` now exposes simple rest tracking via `SessionAnalytics`. Movement
+intensity updates are monitored while a session is running. When a new
+repetition is logged, the time since the previous repetition is calculated and
+appended to `restDurations`.
+
+```swift
+let manager = SessionManager()
+manager.startSession(exerciseType: "squats")
+manager.updateIntensity(0.05, at: 3.0) // low intensity indicates rest
+manager.logRepetition(startOffset: 5.0, endOffset: 6.0, confidence: 0.96)
+print(manager.sessionAnalytics.restDurations) // [2.0]
+```
+
+This allows basic analysis of rest timing between repetitions for a workout
+session.
