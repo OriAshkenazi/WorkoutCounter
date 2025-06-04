@@ -271,12 +271,29 @@ func sequenceFeatureExtractionConsistency() async throws {
 @Test
 func poseObservationConversion() async throws {
     let observation = PoseObservation(joints: [
-        .rightWrist: .init(x: 0.0, y: 0.9, confidence: 1.0),
-        .rightShoulder: .init(x: 0.0, y: 0.5, confidence: 1.0)
+        .rightShoulder: .init(x: 0.0, y: 0.5, confidence: 1.0),
+        .rightElbow: .init(x: 0.0, y: 0.7, confidence: 1.0),
+        .rightWrist: .init(x: 0.2, y: 0.7, confidence: 1.0)
     ])
     let sample = poseSample(from: observation, at: 0)
-    #expect(sample.metric == 0.4)
+    #expect(abs(sample.metric - .pi/2) < 0.0001)
     let features = movementFeatures(from: observation)
     #expect(features.movementIntensity == 1)
+}
+
+@Test
+func visionPoseConversion() async throws {
+    let points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint] = [
+        .rightShoulder: .init(x: 0.0, y: 0.5, confidence: 0.9),
+        .rightElbow: .init(x: 0.0, y: 0.7, confidence: 0.8),
+        .rightWrist: .init(x: 0.2, y: 0.7, confidence: 0.95),
+        .leftHip: .init(x: 0.0, y: 0.2, confidence: 0.7)
+    ]
+    let vn = VNHumanBodyPoseObservation(points: points)
+    let pose = PoseObservation(visionObservation: vn)
+    #expect(pose.joints[.rightWrist]?.confidence == 0.95)
+    #expect(pose.joints[.leftHip]?.x == 0.0)
+    let sample = poseSample(from: pose, at: 0)
+    #expect(abs(sample.metric - .pi/2) < 0.0001)
 }
 
