@@ -130,11 +130,10 @@ public final class TemporalPatternLearner {
         )
     }
 
-    private static func extractSequenceFeatures(_ poses: [PoseSample]) -> [MovementFeatures] {
-        return poses.map { _ in
-            // For demo purposes reuse simple extraction
-            PatternLearner.extractFeatures(from: poses)
-        }
+    static func extractSequenceFeatures(_ poses: [PoseSample]) -> [MovementFeatures] {
+        // compute features once using the full sequence then reuse for each frame
+        let features = PatternLearner.extractFeatures(from: poses)
+        return Array(repeating: features, count: poses.count)
     }
 }
 
