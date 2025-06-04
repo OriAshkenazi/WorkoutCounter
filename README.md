@@ -132,6 +132,22 @@ The tests in `Tests/WorkoutCounterTests/RepetitionTests.swift` demonstrate detec
 
 The package avoids dependencies on platform frameworks so it can compile on Linux and macOS. The public APIs use simple data types making it straightforward to integrate with an iOS app that supplies pose information from Vision.
 
+### Vision Integration
+
+When running on Apple platforms you can convert `VNHumanBodyPoseObservation` values into the pose types used by WorkoutCounter:
+
+```swift
+#if canImport(Vision)
+import Vision
+import WorkoutCounter
+
+let observation: VNHumanBodyPoseObservation = ... // provided by Vision
+let pose = PoseObservation(visionObservation: observation)
+let sample = poseSample(from: pose, at: 0)
+let features = movementFeatures(from: pose)
+#endif
+```
+
 ## Performance Characteristics
 
 The algorithms are lightweight and operate on small arrays of metrics, targeting realtime analysis (~33ms per frame) when connected to camera input. Accuracy depends on the quality of pose data and the learned patterns.
