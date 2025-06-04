@@ -57,3 +57,11 @@ public final class SessionManager {
         analytics.registerRepetition(start: startOffset, end: endOffset)
     }
 }
+
+/// Describes key metrics extracted from a motion sequence
+public struct MovementFeatures {
+    public let jointVelocities: [String: Float]
+    public let jointAngles: [String: Float]
+    public let movementIntensity: Float
+    public let symmetry: Float
+}
