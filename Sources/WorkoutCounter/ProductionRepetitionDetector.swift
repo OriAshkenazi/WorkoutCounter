@@ -3,6 +3,7 @@ import CoreFoundation
 
 /// More robust streaming repetition detector with hysteresis and validation.
 final class ProductionRepetitionDetector {
+    private let exercisePattern: ExercisePattern?
     private(set) var configuration = DetectorConfiguration(
         bufferSize: 180,
         smoothingWindow: 5,
@@ -22,6 +23,10 @@ final class ProductionRepetitionDetector {
     private let validator = TemporalValidator()
     private var processingTimes = CircularBuffer<TimeInterval>(capacity: 60)
 
+    init(pattern: ExercisePattern? = nil) {
+        self.exercisePattern = pattern
+    }
+
     enum DetectionState: Equatable {
         case monitoring
         case potentialStart(frames: Int)
@@ -36,7 +41,8 @@ final class ProductionRepetitionDetector {
         let smoothed = intensityFilter.process(features.movementIntensity)
         let moving = movementHysteresis.process(smoothed)
         let currentPhase = detectCurrentPhase(features)
-        confidence.accumulate(phase: currentPhase, confidence: features.movementIntensity)
+        let score = exercisePattern.map { matchAgainstPattern(features, pattern: $0) } ?? features.movementIntensity
+        confidence.accumulate(phase: currentPhase, confidence: score)
 
         defer { processingTimes.append(CFAbsoluteTimeGetCurrent() - start) }
 

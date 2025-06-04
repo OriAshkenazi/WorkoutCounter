@@ -9,7 +9,7 @@ final class StreamingWorkoutEngine {
     private let sessionManager = SessionManager()
 
     init(exercisePattern: ExercisePattern? = nil) {
-        self.detector = ProductionRepetitionDetector()
+        self.detector = ProductionRepetitionDetector(pattern: exercisePattern)
         self.memoryManager = MemoryManager()
         self.performanceController = PerformanceController()
         detector.adaptToPerformanceLevel(.high)
