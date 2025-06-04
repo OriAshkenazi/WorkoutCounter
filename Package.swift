@@ -14,6 +14,10 @@ let package = Package(
         .library(
             name: "WorkoutCounterCameraSample",
             targets: ["WorkoutCounterCameraSample"]),
+        // Demo executable showcasing Vision integration on iOS
+        .executable(
+            name: "VisionDemoApp",
+            targets: ["VisionDemoApp"]),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -23,6 +27,10 @@ let package = Package(
         .target(
             name: "WorkoutCounterCameraSample",
             dependencies: ["WorkoutCounter"]),
+        .executableTarget(
+            name: "VisionDemoApp",
+            dependencies: ["WorkoutCounter"],
+            path: "Sources/VisionDemoApp"),
         .testTarget(
             name: "WorkoutCounterTests",
             dependencies: ["WorkoutCounter"]
