@@ -12,30 +12,19 @@ public struct PoseSample: Sendable {
     public static let zero = PoseSample(time: 0, metric: 0)
 }
 
+@available(*, deprecated, message: "Use ProductionRepetitionDetector directly for new code")
 public final class RepetitionDetector {
-    public var lowThreshold: Double
-    public var highThreshold: Double
-    private var isDown = false
-    private var currentStart: TimeInterval?
+    private let productionDetector: ProductionRepetitionDetector
 
-    public init(lowThreshold: Double = 0.2, highThreshold: Double = 0.8) {
-        self.lowThreshold = lowThreshold
-        self.highThreshold = highThreshold
+    public init() {
+        self.productionDetector = ProductionRepetitionDetector()
     }
 
-    /// Returns a tuple of start/end timestamps when a repetition is detected.
-    public func process(sample: PoseSample) -> (start: TimeInterval, end: TimeInterval)? {
-        if !isDown {
-            if sample.metric <= lowThreshold {
-                isDown = true
-                currentStart = sample.time
-            }
-        } else {
-            if sample.metric >= highThreshold, let start = currentStart {
-                isDown = false
-                currentStart = nil
-                return (start: start, end: sample.time)
-            }
+    /// Processes a pose sample and returns a completed repetition if available.
+    public func process(sample: PoseSample) -> RepetitionLog? {
+        let result = productionDetector.processFrame(sample)
+        if case .repetitionCompleted(let log) = result {
+            return log
         }
         return nil
     }
