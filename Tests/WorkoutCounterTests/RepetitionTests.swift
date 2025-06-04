@@ -206,3 +206,52 @@ func frameSkippingLowQuality() async throws {
     #expect(!engine.shouldProcessFrame(sample, quality: .low))
     #expect(!engine.shouldProcessFrame(sample, quality: .minimal))
 }
+
+@Test
+func detectorPerformanceLevels() async throws {
+    let detector = ProductionRepetitionDetector()
+
+    detector.adaptToPerformanceLevel(.high)
+    #expect(detector.configuration == DetectorConfiguration(
+        bufferSize: 180,
+        smoothingWindow: 5,
+        smoothingFactor: 0.3,
+        hysteresisLow: 0.05,
+        hysteresisHigh: 0.1,
+        confidenceFrames: 3,
+        confidenceThreshold: 0.7
+    ))
+
+    detector.adaptToPerformanceLevel(.medium)
+    #expect(detector.configuration == DetectorConfiguration(
+        bufferSize: 120,
+        smoothingWindow: 3,
+        smoothingFactor: 0.25,
+        hysteresisLow: 0.07,
+        hysteresisHigh: 0.12,
+        confidenceFrames: 3,
+        confidenceThreshold: 0.6
+    ))
+
+    detector.adaptToPerformanceLevel(.low)
+    #expect(detector.configuration == DetectorConfiguration(
+        bufferSize: 60,
+        smoothingWindow: 2,
+        smoothingFactor: 0.2,
+        hysteresisLow: 0.1,
+        hysteresisHigh: 0.15,
+        confidenceFrames: 2,
+        confidenceThreshold: 0.5
+    ))
+
+    detector.adaptToPerformanceLevel(.minimal)
+    #expect(detector.configuration == DetectorConfiguration(
+        bufferSize: 30,
+        smoothingWindow: 1,
+        smoothingFactor: 0.1,
+        hysteresisLow: 0.15,
+        hysteresisHigh: 0.2,
+        confidenceFrames: 1,
+        confidenceThreshold: 0.4
+    ))
+}
