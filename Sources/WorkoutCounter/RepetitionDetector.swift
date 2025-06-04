@@ -37,3 +37,20 @@ public final class RepetitionDetector {
         return nil
     }
 }
+
+/// Compares extracted features to a learned exercise pattern. Returns a score 0...1.
+public func matchAgainstPattern(_ features: MovementFeatures, pattern: ExercisePattern) -> Float {
+    var score: Float = 0
+    // compare movement intensity
+    let diff = abs(features.movementIntensity - pattern.movementIntensity)
+    let intensityScore = max(0, 1 - diff)
+    score += intensityScore
+    // compare average velocity if available
+    if let fVel = features.jointVelocities["metric"], let pVel = pattern.jointVelocities["metric"] {
+        let velDiff = abs(fVel - pVel)
+        score += max(0, 1 - velDiff)
+    }
+    // symmetry currently constant
+    score += 1 - abs(features.symmetry - pattern.symmetry)
+    return score / 3
+}
