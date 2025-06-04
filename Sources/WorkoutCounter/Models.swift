@@ -65,3 +65,24 @@ public struct MovementFeatures {
     public let movementIntensity: Float
     public let symmetry: Float
 }
+
+/// Captures temporal metrics for a full motion sequence
+public struct TemporalFeatures {
+    public let poseSequence: [MovementFeatures]
+    public let phaseDurations: [TimeInterval]
+    public let velocityProfile: [Float]
+    public let accelerationProfile: [Float]
+    public let transitionPoints: [Int]
+    public let sequenceDuration: TimeInterval
+}
+
+/// Describes a single phase within a repetition
+public struct RepetitionPhase: Equatable {
+    public enum PhaseType {
+        case rest, starting, eccentric, peak, concentric, ending
+    }
+    public let type: PhaseType
+    public let startFrame: Int
+    public let endFrame: Int
+    public let confidence: Float
+}

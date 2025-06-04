@@ -54,3 +54,51 @@ public func matchAgainstPattern(_ features: MovementFeatures, pattern: ExerciseP
     score += 1 - abs(features.symmetry - pattern.symmetry)
     return score / 3
 }
+
+/// Detects complete motion sequences and validates them against a temporal pattern
+public final class SequenceDetector {
+    private var activeSequence: [MovementFeatures] = []
+    private var currentPhase: RepetitionPhase.PhaseType = .rest
+    private let pattern: ExerciseTemporalPattern
+
+    public init(pattern: ExerciseTemporalPattern) {
+        self.pattern = pattern
+    }
+
+    public enum SequenceDetectionResult {
+        case inProgress(phase: RepetitionPhase.PhaseType)
+        case completed(confidence: Float)
+    }
+
+    public func processFrame(_ features: MovementFeatures) -> SequenceDetectionResult {
+        let newPhase = detectPhaseTransition(features)
+        activeSequence.append(features)
+        if newPhase == .rest && currentPhase != .rest {
+            let result = validateSequence(activeSequence)
+            activeSequence.removeAll()
+            currentPhase = .rest
+            return result
+        }
+        currentPhase = newPhase
+        return .inProgress(phase: newPhase)
+    }
+
+    private func detectPhaseTransition(_ features: MovementFeatures) -> RepetitionPhase.PhaseType {
+        if features.movementIntensity < 0.1 {
+            return .rest
+        }
+        guard let last = activeSequence.last else { return .starting }
+        let dv = features.movementIntensity - last.movementIntensity
+        if abs(dv) < 0.01 {
+            return currentPhase
+        }
+        if dv > 0 { return .eccentric } else { return .concentric }
+    }
+
+    private func validateSequence(_ sequence: [MovementFeatures]) -> SequenceDetectionResult {
+        let duration = Double(sequence.count)
+        let durDiff = abs(duration - pattern.expectedDuration)
+        let score = max(0, 1 - Float(durDiff / max(pattern.expectedDuration, 1)))
+        return .completed(confidence: score)
+    }
+}

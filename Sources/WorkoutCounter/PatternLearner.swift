@@ -79,3 +79,67 @@ public final class PatternLearner {
         )
     }
 }
+
+/// Learns temporal patterns for full motion sequences
+public final class TemporalPatternLearner {
+    private var exampleSequences: [TemporalFeatures] = []
+
+    public init() {}
+
+    public func recordExampleSequence(_ poses: [PoseSample]) {
+        let temporal = extractTemporalFeatures(poses)
+        exampleSequences.append(temporal)
+    }
+
+    public func generateTemporalPattern() -> ExerciseTemporalPattern {
+        let durations = exampleSequences.map { $0.sequenceDuration }
+        let avgDuration = durations.reduce(0, +) / Double(max(durations.count, 1))
+        let velocityProfiles = exampleSequences.map { $0.velocityProfile }
+        let templateVel = velocityProfiles.first ?? []
+        return ExerciseTemporalPattern(expectedDuration: avgDuration, velocityTemplate: templateVel)
+    }
+
+    private func extractTemporalFeatures(_ poses: [PoseSample]) -> TemporalFeatures {
+        guard !poses.isEmpty else {
+            return TemporalFeatures(poseSequence: [], phaseDurations: [], velocityProfile: [], accelerationProfile: [], transitionPoints: [], sequenceDuration: 0)
+        }
+        var velocities: [Float] = []
+        var accelerations: [Float] = []
+        for i in 1..<poses.count {
+            let dt = poses[i].time - poses[i-1].time
+            if dt > 0 {
+                let v = Float((poses[i].metric - poses[i-1].metric)/dt)
+                velocities.append(v)
+            } else {
+                velocities.append(0)
+            }
+        }
+        for i in 1..<velocities.count {
+            let dv = velocities[i] - velocities[i-1]
+            accelerations.append(dv)
+        }
+        let features = Self.extractSequenceFeatures(poses)
+        let duration = poses.last!.time - poses.first!.time
+        return TemporalFeatures(
+            poseSequence: features,
+            phaseDurations: [],
+            velocityProfile: velocities,
+            accelerationProfile: accelerations,
+            transitionPoints: [],
+            sequenceDuration: duration
+        )
+    }
+
+    private static func extractSequenceFeatures(_ poses: [PoseSample]) -> [MovementFeatures] {
+        return poses.map { _ in
+            // For demo purposes reuse simple extraction
+            PatternLearner.extractFeatures(from: poses)
+        }
+    }
+}
+
+/// Represents a simplified temporal pattern template
+public struct ExerciseTemporalPattern {
+    public let expectedDuration: TimeInterval
+    public let velocityTemplate: [Float]
+}
