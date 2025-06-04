@@ -57,8 +57,12 @@ final class StreamingWorkoutEngine {
         }
     }
 
-    private func shouldProcessFrame(_ sample: PoseSample, quality: PerformanceController.QualityLevel) -> Bool {
-        _ = quality
-        return true
+    func shouldProcessFrame(_ sample: PoseSample, quality: PerformanceController.QualityLevel) -> Bool {
+        switch quality {
+        case .low, .minimal:
+            return false
+        default:
+            return true
+        }
     }
 }
